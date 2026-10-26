@@ -12,7 +12,7 @@ import (
 	"github.com/alibabacloud-go/tea/dara"
 )
 
-const Version = "0.1.0"
+const Version = "0.1.1"
 
 type GlobalParameters struct {
 	Headers map[string]*string `json:"headers,omitempty"`

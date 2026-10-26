@@ -1,0 +1,17 @@
+{
+  "name": "inspire-go-sdk",
+  "plugins": [
+    {
+      "name": "inspire-go-sdk",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

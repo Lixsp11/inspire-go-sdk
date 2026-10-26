@@ -1,7 +1,8 @@
-// Check the bundled skill's metadata, local links and Go example syntax.
+// Check plugin metadata and the bundled skill's links and Go example syntax.
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/parser"
 	"go/token"
@@ -9,11 +10,65 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	openapi "github.com/Lixsp11/inspire-go-sdk/src/openapi/client"
 )
 
 var linkPattern = regexp.MustCompile(`\]\(([^)]+)\)`)
 var codePattern = regexp.MustCompile("(?s)```go\\r?\\n(.*?)\\r?\\n```")
 var importsPattern = regexp.MustCompile(`(?s)import\s*\(.*?\)`)
+
+func checkPlugin() error {
+	var manifest struct {
+		Schema      string `json:"$schema"`
+		Name        string `json:"name"`
+		Version     string `json:"version"`
+		Description string `json:"description"`
+		Extensions  struct {
+			OpenAI struct {
+				RequiresLocalExecutor bool `json:"requires_local_executor"`
+			} `json:"com.openai"`
+		} `json:"extensions"`
+	}
+	data, err := os.ReadFile("plugin.json")
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(data, &manifest); err != nil {
+		return err
+	}
+	if manifest.Schema != "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json" ||
+		manifest.Name != "inspire-go-sdk" || manifest.Version != openapi.Version ||
+		strings.TrimSpace(manifest.Description) == "" || !manifest.Extensions.OpenAI.RequiresLocalExecutor {
+		return fmt.Errorf("invalid plugin identity, version or local executor setting")
+	}
+	var marketplace struct {
+		Name    string `json:"name"`
+		Plugins []struct {
+			Name   string `json:"name"`
+			Source struct {
+				Source string `json:"source"`
+				Path   string `json:"path"`
+			} `json:"source"`
+		} `json:"plugins"`
+	}
+	data, err = os.ReadFile(filepath.Join(".agents", "plugins", "marketplace.json"))
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(data, &marketplace); err != nil {
+		return err
+	}
+	if marketplace.Name != manifest.Name || len(marketplace.Plugins) != 1 {
+		return fmt.Errorf("invalid marketplace name or plugin count")
+	}
+	entry := marketplace.Plugins[0]
+	if entry.Name != manifest.Name || entry.Source.Source != "local" || entry.Source.Path == "" || filepath.Clean(entry.Source.Path) != "." {
+		return fmt.Errorf("marketplace must resolve the plugin at the repository root")
+	}
+	fmt.Printf("Plugin valid: %s %s.\n", manifest.Name, manifest.Version)
+	return nil
+}
 
 func check() error {
 	root := filepath.Join("skills", "inspire-go-sdk")
@@ -98,6 +153,10 @@ func check() error {
 	return nil
 }
 func main() {
+	if err := checkPlugin(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	if err := check(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

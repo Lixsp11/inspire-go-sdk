@@ -17,6 +17,19 @@
 
 ---
 
+## Install
+
+With a Codex CLI that supports plugins:
+
+```shell
+codex plugin marketplace add Lixsp11/inspire-go-sdk --ref v0.1.1
+codex plugin add inspire-go-sdk@inspire-go-sdk
+```
+
+Start a new Codex session and ask it to use **Inspire Go SDK**.
+
+Platform calls require Go 1.23+ and your management credentials. Set `INSPIRE_COOKIE` to your existing session cookie and `INSPIRE_PROXY` to your proxy URL when needed.
+
 ## Tech stack
 
 | | |

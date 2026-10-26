@@ -60,5 +60,5 @@ jobs:
         run: ./tools/go.ps1 vet ./...
       - name: Build
         run: ./tools/go.ps1 build ./...
-      - name: Validate skill
+      - name: Validate plugin and skill
         run: ./tools/go.ps1 run ./tools/checkskill

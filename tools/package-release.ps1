@@ -5,6 +5,8 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($Version -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') { throw 'Invalid release version.' }
 $sdkRoot = Split-Path -Parent $PSScriptRoot
+$sdkManifest = Get-Content -LiteralPath (Join-Path $sdkRoot 'plugin.json') -Raw | ConvertFrom-Json
+if ($sdkManifest.name -ne 'inspire-go-sdk' -or $sdkManifest.version -ne $Version) { throw 'Release version differs from plugin manifest.' }
 $sdkVersionText = [IO.File]::ReadAllText((Join-Path $sdkRoot 'src/openapi/client/config.go'))
 $sdkVersionMatch = [regex]::Match($sdkVersionText, 'const\s+Version\s*=\s*"([^"]+)"')
 if (-not $sdkVersionMatch.Success -or $sdkVersionMatch.Groups[1].Value -ne $Version) { throw 'Release version differs from SDK Version.' }
@@ -30,11 +32,19 @@ function New-SdkZip {
 }
 Push-Location $sdkRoot
 try {
+    & git diff --quiet HEAD -- .
+    if ($LASTEXITCODE -ne 0) { throw 'Commit tracked changes before packaging a release.' }
     & git archive --format=tar.gz ("--prefix=inspire-go-sdk-${Version}/") ("--output=" + (Join-Path $sdkOutput "inspire-go-sdk_${Version}_source.tar.gz")) HEAD
     if ($LASTEXITCODE -ne 0) { throw 'SDK source archive failed.' }
+    $sdkPluginArchive = Join-Path $sdkOutput "inspire-go-sdk-plugin_${Version}.zip"
+    & git archive --format=zip --prefix=inspire-go-sdk/ ("--output=" + $sdkPluginArchive) HEAD
+    if ($LASTEXITCODE -ne 0) { throw 'Plugin archive failed.' }
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [IO.Compression.ZipFile]::ExtractToDirectory($sdkPluginArchive, $sdkStage)
+    $sdkPluginRoot = Join-Path $sdkStage 'inspire-go-sdk'
     $sdkSkillRoot = Join-Path $sdkStage 'skill'
     New-Item -ItemType Directory -Path $sdkSkillRoot | Out-Null
-    Copy-Item -LiteralPath (Join-Path $sdkRoot 'skills/inspire-go-sdk') -Destination $sdkSkillRoot -Recurse
-    Copy-Item -LiteralPath (Join-Path $sdkRoot 'LICENSE') -Destination (Join-Path $sdkSkillRoot 'inspire-go-sdk/LICENSE')
+    Copy-Item -LiteralPath (Join-Path $sdkPluginRoot 'skills/inspire-go-sdk') -Destination $sdkSkillRoot -Recurse
+    Copy-Item -LiteralPath (Join-Path $sdkPluginRoot 'LICENSE') -Destination (Join-Path $sdkSkillRoot 'inspire-go-sdk/LICENSE')
     New-SdkZip $sdkSkillRoot (Join-Path $sdkOutput "inspire-go-sdk-skill_${Version}.zip")
 } finally { Pop-Location }
