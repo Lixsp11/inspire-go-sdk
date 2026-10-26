@@ -30,7 +30,15 @@ try {
         $cliMatches = @(Get-Content -LiteralPath (Join-Path $cliStaging 'SHA256SUMS') | Where-Object { $_ -match ('^[a-f0-9]{64}  ' + [regex]::Escape($cliAsset) + '$') })
         if ($cliMatches.Count -ne 1) { throw 'Missing release checksum.' }
         $cliExpected = $cliMatches[0].Substring(0, 64)
-        $cliActual = (Get-FileHash -LiteralPath (Join-Path $cliStaging $cliAsset) -Algorithm SHA256).Hash.ToLowerInvariant()
+        $cliHasher = [Security.Cryptography.SHA256]::Create()
+        $cliHashStream = $null
+        try {
+            $cliHashStream = [IO.File]::OpenRead((Join-Path $cliStaging $cliAsset))
+            $cliActual = [BitConverter]::ToString($cliHasher.ComputeHash($cliHashStream)).Replace('-', '').ToLowerInvariant()
+        } finally {
+            if ($cliHashStream) { $cliHashStream.Dispose() }
+            $cliHasher.Dispose()
+        }
         if ($cliActual -ne $cliExpected) { throw 'Release checksum mismatch.' }
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         $cliPayload = Join-Path $cliStaging 'payload'
