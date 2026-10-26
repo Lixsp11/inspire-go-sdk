@@ -106,13 +106,20 @@ try {
             break
         }
     }
-    [void]$cliProcess.Start()
-    $cliStarted = $true
+    $cliOriginalInputEncoding = [Console]::InputEncoding
+    try {
+        # Windows PowerShell's redirected writer otherwise emits a UTF-8 BOM.
+        [Console]::InputEncoding = New-Object Text.UTF8Encoding($false)
+        [void]$cliProcess.Start()
+        $cliStarted = $true
+    } finally {
+        [Console]::InputEncoding = $cliOriginalInputEncoding
+    }
     $cliStdoutTask = $cliProcess.StandardOutput.BaseStream.CopyToAsync([Console]::OpenStandardOutput())
     $cliStderrTask = $cliProcess.StandardError.BaseStream.CopyToAsync([Console]::OpenStandardError())
     try {
         if ($cliInput) { $cliProcess.StandardInput.BaseStream.Write($cliInput, 0, $cliInputLength) }
-        $cliProcess.StandardInput.Close()
+        $cliProcess.StandardInput.BaseStream.Close()
     } catch [IO.IOException] {
         # The CLI may reject its arguments before consuming stdin.
     }

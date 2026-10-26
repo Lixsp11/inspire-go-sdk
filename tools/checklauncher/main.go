@@ -105,7 +105,9 @@ func run(binary string) error {
 			return err
 		}
 		harness = filepath.Join(root, "harness.ps1")
-		code := `$cliArguments = @($args)
+		code := `[Console]::InputEncoding = [Text.Encoding]::UTF8
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+$cliArguments = @($args)
 function Invoke-WebRequest {
  param([switch]$UseBasicParsing,[string]$Uri,[string]$OutFile)
  if (-not $Uri.StartsWith('https://github.com/Lixsp11/inspire-go-sdk/releases/download/')) { throw 'Unexpected release host' }
@@ -186,8 +188,8 @@ printf '%s\n' "$name" >> "$INSPIRE_TEST_RELEASE_DIR/requests"
 	if err != nil || code != 0 || diagnostics != "" || !json.Valid([]byte(out)) {
 		return fmt.Errorf("launcher argument forwarding failed: %d %s %s %v", code, out, diagnostics, err)
 	}
-	code, out, diagnostics, err = invoke(cache, `{"workspace_id":"stdin-ws"}`, "train", "ListJobs", "--body-file=-", "--cli-dry-run-json")
-	if err != nil || code != 0 || diagnostics != "" || !strings.Contains(out, "stdin-ws") {
+	code, out, diagnostics, err = invoke(cache, `{"workspace_id":"stdin-ws","keyword":"中文 🌏"}`, "train", "ListJobs", "--body-file=-", "--cli-dry-run-json")
+	if err != nil || code != 0 || diagnostics != "" || !strings.Contains(out, "stdin-ws") || !strings.Contains(out, "中文 🌏") {
 		return fmt.Errorf("launcher stdin forwarding failed: %d %s %s %v", code, out, diagnostics, err)
 	}
 	code, out, diagnostics, err = invoke(cache, "", "train", "ListJobs", "--WorkspaceId", "ws", "--PageSize", "invalid")
