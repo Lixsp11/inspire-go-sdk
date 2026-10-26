@@ -1,22 +1,24 @@
-// Check plugin metadata and the bundled skill's links and Go example syntax.
+// Check plugin metadata and validate skill examples through the CLI without network calls.
 package main
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/Lixsp11/inspire-go-sdk/src/cli"
+	commands "github.com/Lixsp11/inspire-go-sdk/src/openapi"
 	openapi "github.com/Lixsp11/inspire-go-sdk/src/openapi/client"
 )
 
 var linkPattern = regexp.MustCompile(`\]\(([^)]+)\)`)
-var codePattern = regexp.MustCompile("(?s)```go\\r?\\n(.*?)\\r?\\n```")
-var importsPattern = regexp.MustCompile(`(?s)import\s*\(.*?\)`)
+var codePattern = regexp.MustCompile("(?s)```shell\\r?\\n(.*?)\\r?\\n```")
+var bodyPattern = regexp.MustCompile("(?s)```json\\r?\\n(.*?)\\r?\\n```")
 
 func checkPlugin() error {
 	var manifest struct {
@@ -41,6 +43,10 @@ func checkPlugin() error {
 		manifest.Name != "inspire-go-sdk" || manifest.Version != openapi.Version ||
 		strings.TrimSpace(manifest.Description) == "" || !manifest.Extensions.OpenAI.RequiresLocalExecutor {
 		return fmt.Errorf("invalid plugin identity, version or local executor setting")
+	}
+	version, err := os.ReadFile(filepath.Join("skills", "inspire-go-sdk", "scripts", "VERSION"))
+	if err != nil || strings.TrimSpace(string(version)) != manifest.Version {
+		return fmt.Errorf("launcher and plugin versions must match")
 	}
 	var marketplace struct {
 		Name    string `json:"name"`
@@ -99,6 +105,14 @@ func check() error {
 		return fmt.Errorf("invalid skill name or description")
 	}
 	files, examples := 0, 0
+	jobs, err := os.ReadFile(filepath.Join(root, "references", "jobs.md"))
+	if err != nil {
+		return err
+	}
+	bodyMatch := bodyPattern.FindStringSubmatch(string(jobs))
+	if len(bodyMatch) != 2 {
+		return fmt.Errorf("missing job request example")
+	}
 	err = filepath.WalkDir(root, func(path string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -118,6 +132,9 @@ func check() error {
 			return e
 		}
 		text := string(data)
+		if strings.Contains(text, "```go") {
+			return fmt.Errorf("skill examples must use the prebuilt CLI")
+		}
 		for _, match := range linkPattern.FindAllStringSubmatch(text, -1) {
 			target := strings.SplitN(match[1], "#", 2)[0]
 			if target == "" || strings.Contains(target, "://") {
@@ -133,15 +150,45 @@ func check() error {
 			}
 		}
 		for _, match := range codePattern.FindAllStringSubmatch(text, -1) {
-			examples++
-			source := match[1]
-			if !strings.HasPrefix(strings.TrimSpace(source), "package ") {
-				imports := importsPattern.FindAllString(source, -1)
-				source = importsPattern.ReplaceAllString(source, "")
-				source = "package example\n" + strings.Join(imports, "\n") + "\nfunc example(){\n" + source + "\n}"
-			}
-			if _, e := parser.ParseFile(token.NewFileSet(), path, source, parser.AllErrors); e != nil {
-				return fmt.Errorf("invalid Go example in %s: %w", path, e)
+			for _, line := range strings.Split(match[1], "\n") {
+				args := strings.Fields(line)
+				if len(args) == 0 {
+					continue
+				}
+				if args[0] != "inspire" {
+					return fmt.Errorf("unexpected CLI in %s", path)
+				}
+				args = args[1:]
+				examples++
+				for i := 0; i < len(args)-1; i++ {
+					if args[i] == "--body-file" {
+						args[i+1] = "-"
+					}
+				}
+				help := len(args) == 0 || args[0] == "configure" || args[0] == "version"
+				dry := false
+				for _, arg := range args {
+					if arg == "--help" {
+						help = true
+					}
+					if arg == "--cli-dry-run-json" {
+						dry = true
+					}
+				}
+				if help {
+					if !strings.Contains(strings.Join(args, " "), "--help") {
+						args = append(args, "--help")
+					}
+				} else if !dry {
+					args = append(args, "--cli-dry-run-json")
+				}
+				ctx := cli.NewCommandContext(&bytes.Buffer{}, &bytes.Buffer{})
+				ctx.Context = context.Background()
+				ctx.Stdin = strings.NewReader(bodyMatch[1])
+				ctx.Getenv = func(string) string { return "" }
+				if e := commands.NewCommand().Execute(ctx, args); e != nil {
+					return fmt.Errorf("invalid CLI example in %s: %w", path, e)
+				}
 			}
 		}
 		return nil
@@ -149,7 +196,10 @@ func check() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Skill valid: %d Markdown files, %d Go examples parsed (syntax only).\n", files, examples)
+	if examples == 0 {
+		return fmt.Errorf("skill must include CLI examples")
+	}
+	fmt.Printf("Skill valid: %d Markdown files, %d CLI examples checked without platform access.\n", files, examples)
 	return nil
 }
 func main() {

@@ -62,3 +62,12 @@ jobs:
         run: ./tools/go.ps1 build ./...
       - name: Validate plugin and skill
         run: ./tools/go.ps1 run ./tools/checkskill
+      - name: Check compiled CLI and launchers without installing
+        run: |
+          $cliName = 'inspire'
+          if ($env:OS -eq 'Windows_NT') { $cliName += '.exe' }
+          $cliBinary = Join-Path $PWD "tmp/$cliName"
+          $env:CGO_ENABLED = '0'
+          ./tools/go.ps1 build -trimpath -o $cliBinary ./src/main
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./tools/go.ps1 run ./tools/checklauncher --binary $cliBinary

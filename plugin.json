@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "inspire-go-sdk",
-  "version": "0.1.1",
-  "description": "Agent-ready access to the Inspire computing platform through the Go SDK.",
+  "version": "0.2.0",
+  "description": "Manage Inspire resources with a prebuilt CLI powered by the Go SDK.",
   "repository": "https://github.com/Lixsp11/inspire-go-sdk",
   "license": "MIT",
   "extensions": {
@@ -10,7 +10,7 @@
       "requires_local_executor": true,
       "interface": {
         "displayName": "Inspire Go SDK",
-        "shortDescription": "Query resources and manage training jobs with the Inspire Go SDK."
+        "shortDescription": "Query resources and manage training jobs with the prebuilt Inspire CLI."
       }
     }
   }
