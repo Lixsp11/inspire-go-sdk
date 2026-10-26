@@ -1,0 +1,12 @@
+/tmp/
+/dist/
+*.exe
+*.test
+coverage.out
+.env*
+*.cookie
+*.token
+*.har
+*.log
+*.pem
+*.key

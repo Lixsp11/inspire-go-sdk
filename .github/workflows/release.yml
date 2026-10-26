@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows, linux, darwin]
+        arch: [amd64, arm64]
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: stable
+          cache: false
+      - name: Build SDK
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: '0'
+        run: ./tools/go.ps1 build -trimpath ./src/...
+
+  source:
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Package SDK and skill
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') { throw 'Invalid release tag.' }
+          ./tools/package-release.ps1 -Version $env:RELEASE_TAG.Substring(1)
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sdk-and-skill
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    needs: source
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums and release notes
+        run: |
+          $assets = Get-ChildItem dist -File | Sort-Object Name
+          if ($assets.Count -ne 2) { throw "Expected SDK source and skill; got $($assets.Count)." }
+          $checksums = $assets | ForEach-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + $_.Name }
+          [IO.File]::WriteAllLines((Join-Path $PWD 'dist/SHA256SUMS'), $checksums)
+          [IO.File]::WriteAllLines((Join-Path $PWD 'release-notes.txt'), @(
+            'Go SDK for the Inspire computing platform.',
+            '',
+            'Includes SDK source, the inspire-go-sdk skill and SHA256 checksums.',
+            'Built for Windows, Linux and Darwin on amd64 and arm64.'
+          ))
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $assets = @(Get-ChildItem dist -File | Sort-Object Name | ForEach-Object FullName)
+          $releaseArgs = @('release', 'create', $env:RELEASE_TAG) + $assets + @('--draft', '--verify-tag', '--title', "Inspire Go SDK $env:RELEASE_TAG", '--notes-file', 'release-notes.txt')
+          if ($env:RELEASE_TAG.Contains('-')) { $releaseArgs += @('--prerelease', '--latest=false') }
+          & gh @releaseArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          gh release edit $env:RELEASE_TAG --draft=false

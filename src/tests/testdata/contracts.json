@@ -1,0 +1,123 @@
+{
+  "provenance": {
+    "type": "synthetic_reference_cases_not_live_captures",
+    "repository": "https://github.com/realZillionX/InspireSkill",
+    "commit": "06e881ff1c52af91dc4ccb8f29581d0ff4895b58",
+    "sources": [
+      "cli/tests/test_browser_api_jobs.py",
+      "cli/tests/test_browser_api_project_and_notebook_selectors.py",
+      "cli/inspire/platform/web/browser_api/notebooks.py",
+      "cli/inspire/services/job/job_submission.py",
+      "cli/inspire/services/catalog/quotas.py"
+    ]
+  },
+  "list_jobs": {
+    "path": "/api/v2/train?Action=ListJobs",
+    "body": {
+      "workspace_id": "ws-x",
+      "page_num": 2,
+      "page_size": 7,
+      "created_by": "user-x",
+      "keyword": "demo"
+    },
+    "result": {
+      "jobs": [
+        {
+          "job_id": "job-abc",
+          "status": "RUNNING",
+          "future_server_field": {
+            "retained": true
+          }
+        }
+      ],
+      "total": "9"
+    }
+  },
+  "list_projects": {
+    "path": "/api/v2/project?Action=ListProjects",
+    "body": {
+      "page": 1,
+      "page_size": 100,
+      "filter": {
+        "workspace_id": "ws-x",
+        "check_admin": true
+      }
+    },
+    "result": {
+      "items": [
+        {
+          "id": "project-1",
+          "name": "Demo"
+        }
+      ],
+      "total": "1"
+    }
+  },
+  "list_notebooks": {
+    "path": "/api/v2/notebook?Action=ListNotebooks",
+    "body": {
+      "workspace_id": "ws-x",
+      "page": 1,
+      "page_size": 100,
+      "filter_by": {
+        "keyword": "",
+        "user_id": [
+          "user-x"
+        ],
+        "logic_compute_group_id": [],
+        "status": [],
+        "mirror_url": []
+      },
+      "order_by": [
+        {
+          "field": "created_at",
+          "order": "desc"
+        }
+      ]
+    },
+    "result": {
+      "list": [
+        {
+          "id": "nb-1"
+        }
+      ],
+      "total": 1
+    }
+  },
+  "create_job": {
+    "path": "/api/v2/train?Action=CreateJobConsole",
+    "body": {
+      "name": "demo",
+      "workspace_id": "ws-x",
+      "project_id": "project-1",
+      "logic_compute_group_id": "lcg-1",
+      "command": "python train.py",
+      "framework": "pytorch",
+      "task_priority": 10,
+      "enable_notification": false,
+      "framework_config": [
+        {
+          "cpu": 4,
+          "gpu_count": 1,
+          "mem_gi": 16,
+          "shm_gi": 2,
+          "image": "registry.example/train:v1",
+          "image_type": "SOURCE_PRIVATE",
+          "instance_count": 1,
+          "resource_spec_price": {
+            "cpu_type": "",
+            "cpu_count": 4,
+            "gpu_type": "gpu-machine-type",
+            "gpu_count": 1,
+            "memory_size_gib": 16,
+            "logic_compute_group_id": "lcg-1",
+            "quota_id": "quota-1"
+          }
+        }
+      ]
+    },
+    "result": {
+      "job_id": "job-new"
+    }
+  }
+}

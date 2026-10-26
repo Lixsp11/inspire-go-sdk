@@ -1,0 +1,74 @@
+[
+  {
+    "path": "github.com/alibabacloud-go/debug",
+    "version": "v1.0.0",
+    "files": [
+      "github.com__alibabacloud-go__debug@v1.0.0/LICENSE"
+    ]
+  },
+  {
+    "path": "github.com/alibabacloud-go/tea",
+    "version": "v1.5.2",
+    "files": [
+      "github.com__alibabacloud-go__tea@v1.5.2/LICENSE"
+    ]
+  },
+  {
+    "path": "github.com/alibabacloud-go/tea-utils/v2",
+    "version": "v2.0.9",
+    "files": [
+      "github.com__alibabacloud-go__tea-utils__v2@v2.0.9/LICENSE"
+    ]
+  },
+  {
+    "path": "github.com/clbanning/mxj/v2",
+    "version": "v2.7.0",
+    "files": [
+      "github.com__clbanning__mxj__v2@v2.7.0/LICENSE"
+    ]
+  },
+  {
+    "path": "github.com/gorilla/websocket",
+    "version": "v1.5.3",
+    "files": [
+      "github.com__gorilla__websocket@v1.5.3/LICENSE"
+    ]
+  },
+  {
+    "path": "github.com/json-iterator/go",
+    "version": "v1.1.12",
+    "files": [
+      "github.com__json-iterator__go@v1.1.12/LICENSE"
+    ]
+  },
+  {
+    "path": "github.com/modern-go/concurrent",
+    "version": "v0.0.0-20180228061459-e0a39a4cb421",
+    "files": [
+      "github.com__modern-go__concurrent@v0.0.0-20180228061459-e0a39a4cb421/LICENSE"
+    ]
+  },
+  {
+    "path": "github.com/modern-go/reflect2",
+    "version": "v1.0.2",
+    "files": [
+      "github.com__modern-go__reflect2@v1.0.2/LICENSE"
+    ]
+  },
+  {
+    "path": "golang.org/x/net",
+    "version": "v0.26.0",
+    "files": [
+      "golang.org__x__net@v0.26.0/LICENSE",
+      "golang.org__x__net@v0.26.0/PATENTS"
+    ]
+  },
+  {
+    "path": "golang.org/x/text",
+    "version": "v0.16.0",
+    "files": [
+      "golang.org__x__text@v0.16.0/LICENSE",
+      "golang.org__x__text@v0.16.0/PATENTS"
+    ]
+  }
+]

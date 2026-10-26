@@ -1,0 +1,8 @@
+Inspire Go SDK is an independent implementation for the SII computing platform.
+
+The native Inspire JSON contract and test cases use interface information from
+realZillionX/InspireSkill (MIT), commit
+06e881ff1c52af91dc4ccb8f29581d0ff4895b58. Contract fixtures are maintained in
+src/tests/testdata/contracts.json.
+
+Third-party dependency licenses are included under third_party/licenses.
